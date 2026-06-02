@@ -1,1 +1,6 @@
-
+streamlit
+supabase
+openai
+gTTS
+st-audiorec
+python-dotenv
