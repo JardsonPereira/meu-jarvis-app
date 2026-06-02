@@ -1,6 +1,6 @@
 streamlit
 supabase
 openai
-audio-recorder-streamlit
+streamlit-audiorec
 gTTS
 python-dotenv
