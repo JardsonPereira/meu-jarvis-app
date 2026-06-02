@@ -1,36 +1,44 @@
-import openai
-from supabase import create_client
 import streamlit as st
+from supabase import create_client
+from openai import OpenAI
+from gtts import gTTS
 import io
 
-# Configuração dos clientes
+# Inicializa o cliente OpenAI de forma segura
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+# Inicializa o Supabase de forma segura
 supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 def transcrever_audio(audio_bytes):
-    """Envia o áudio para a API do Whisper (OpenAI) e recebe o texto."""
-    # Transforma os bytes em um arquivo que a API entende
+    """Envia o áudio para a API do Whisper (OpenAI)."""
     audio_file = io.BytesIO(audio_bytes)
     audio_file.name = "audio.wav"
     
-    transcript = openai.audio.transcriptions.create(
+    transcript = client.audio.transcriptions.create(
         model="whisper-1", 
         file=audio_file
     )
     return transcript.text
 
-def buscar_venda(query):
-    # Lógica de busca no Supabase (como vimos antes)
-    response = supabase.table("produtos").select("*").ilike("nome", f"%{query}%").execute()
-    return str(response.data)
-
 def responder_jarvis(comando_texto):
-    contexto = buscar_venda(comando_texto)
-    prompt = f"Você é o Jarvis. Use estes dados: {contexto}. Responda: {comando_texto}"
+    """Lógica da IA consultando o banco."""
+    # Busca simplificada (exemplo)
+    response = supabase.table("produtos").select("nome, descricao").limit(5).execute()
+    contexto = str(response.data)
     
-    resposta = openai.chat.completions.create(
+    prompt = f"Você é o Jarvis. Use estes dados de estoque: {contexto}. Responda à pergunta: {comando_texto}"
+    
+    resposta = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "system", "content": "Você é Jarvis."},
+        messages=[{"role": "system", "content": "Você é Jarvis, especialista em logística."},
                   {"role": "user", "content": prompt}]
     )
     return resposta.choices[0].message.content
+
+def gerar_audio(texto):
+    """Cria o arquivo de áudio."""
+    tts = gTTS(text=texto, lang='pt', slow=False)
+    arquivo = "resposta.mp3"
+    tts.save(arquivo)
+    return arquivo
